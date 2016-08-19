@@ -17,11 +17,11 @@ another application. For example, standalone program cannot
 send media from telegram to smack, but web-application can host
 this content. We will review only standalone usage on this page
 
-    GW_XMPP_ADDR=bot@jabber.ru
-    GW_XMPP_PASSWD=tops3cr3t
-    GW_TG_CHAT=1337
-    GW_XMPP_ROOM=chat@conference.jabber.ru
-    GW_TG_API=0123456789:S3cr3T
+    export GW_XMPP_ADDR=bot@jabber.ru
+    export GW_XMPP_PASSWD=tops3cr3t
+    export GW_TG_CHAT=1337
+    export GW_XMPP_ROOM=chat@conference.jabber.ru
+    export GW_TG_API=0123456789:S3cr3T
 
     $ java -jar target/goatway-0.5.0-standalone.jar
 
