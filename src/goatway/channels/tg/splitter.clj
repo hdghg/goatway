@@ -34,7 +34,7 @@
       (proxy [AbstractConnectionListener] []
         (authenticated [_ _]
           (log/infof "smack-splitter: %s authenticated" sender)
-          (xmpp-u/join-muc muc sender))))
+          (swap! goatway.channels.xmpp.filter/ignored-local conj (xmpp-u/join-muc muc sender)))))
     (-> conn .connect .login)
     [conn muc]))
 

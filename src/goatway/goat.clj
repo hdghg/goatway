@@ -59,7 +59,7 @@
       (proxy [AbstractConnectionListener] []
         (authenticated [_ _]
           (log/info "smack: authenticated")
-          (xmpp-u/join-muc muc login))
+          (swap! goatway.channels.xmpp.filter/ignored-local conj (xmpp-u/join-muc muc login)))
         (connectionClosedOnError [e]
           (log/warn e)
           (log/info "smack: reconnecting")

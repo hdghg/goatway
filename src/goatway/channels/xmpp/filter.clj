@@ -1,16 +1,18 @@
 (ns goatway.channels.xmpp.filter
   (:require [clojure.core.async :refer [chan go <! >!]]
-            [amalloy.ring-buffer :as ring-buffer])
-  (:import (org.jxmpp.util XmppStringUtils)))
+            [amalloy.ring-buffer :as ring-buffer]
+            [clojure.tools.logging :as log]))
+
+(def ignored-local (atom #{}))
 
 (def sent (atom (ring-buffer/ring-buffer 20)))
 
 (defn matches
   "Returns true when sender not ignored and not himself"
-  [{:keys [jid gw-xmpp-addr nick ignored]}]
+  [{:keys [nick ignored body]}]
   (not (or (get ignored nick)
-           (not jid)
-           (= gw-xmpp-addr (XmppStringUtils/parseBareJid jid)))))
+           (get @ignored-local nick)
+           (not body))))
 
 (defn filter-chan
   "Filters messages that not ignored and was not sent before to out channel"

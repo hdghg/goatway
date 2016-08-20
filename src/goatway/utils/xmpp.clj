@@ -19,4 +19,5 @@
                 (log/error (str "Unknown error " e)))
               (dosync (ref-set last-err e))))
           (if @last-err
-            (recur (dec attempt) last-err (str nick "-" (- 10 attempt))))))))
+            (recur (dec attempt) last-err (str nick "-" (- 10 attempt)))
+            try-nick)))))
