@@ -1,13 +1,11 @@
 (ns goatway.channels.tg.splitter
-  (:require [clojure.tools.logging :as log]
-            [clojure.core.async :refer [chan go <! >!]]
+  (:require [clojure.core.async :refer [chan go <! >!]]
             [clojure.string :as str]
             [goatway.utils.string :as u]
             [goatway.utils.xmpp :as xmpp-u])
   (:import (java.util WeakHashMap)
            (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
-           (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
-           (org.jivesoftware.smack AbstractConnectionListener)))
+           (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)))
 
 (def connections (WeakHashMap.))
 
@@ -29,12 +27,7 @@
         conn (XMPPTCPConnection. config)
         mucm (MultiUserChatManager/getInstanceFor conn)
         muc (.getMultiUserChat mucm xmpp-room)]
-    (.addConnectionListener
-      conn
-      (proxy [AbstractConnectionListener] []
-        (authenticated [_ _]
-          (log/infof "smack-splitter: %s authenticated" sender)
-          (swap! goatway.channels.xmpp.filter/ignored-local conj (xmpp-u/join-muc muc sender)))))
+    (.addConnectionListener conn (xmpp-u/create-listener muc sender))
     (-> conn .connect .login)
     [conn muc]))
 

@@ -12,7 +12,7 @@
             [clojure.core.async :as async]
             [goatway.utils.xmpp :as xmpp-u]
             [goatway.utils.string :as u])
-  (:import (org.jivesoftware.smack SmackConfiguration PacketCollector AbstractConnectionListener)
+  (:import (org.jivesoftware.smack SmackConfiguration PacketCollector)
            (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager)
            (org.jivesoftware.smack.roster Roster)))
@@ -56,14 +56,8 @@
         ignored (if gw-xmpp-ignored (into #{} (str/split gw-xmpp-ignored #";")) #{})]
     (.addConnectionListener
       conn
-      (proxy [AbstractConnectionListener] []
-        (authenticated [_ _]
-          (log/info "smack: authenticated")
-          (swap! goatway.channels.xmpp.filter/ignored-local conj (xmpp-u/join-muc muc login)))
-        (connectionClosedOnError [e]
-          (log/warn e)
-          (log/info "smack: reconnecting")
-          (.connect conn))))
+      (xmpp-u/create-listener
+        muc login (fn [] (log/info "smack: reconnecting") (.connect conn))))
     (-> conn .connect .login)
     (future (while true
               (let [next-elem {:gw-tg-api gw-tg-api :gw-tg-chat gw-tg-chat

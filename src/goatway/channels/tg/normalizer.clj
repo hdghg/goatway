@@ -46,15 +46,23 @@
       (loop []
         (let [{:keys [result chat_id] :as all} (<! in-chan)
               error (:error result)
-              body (:body result)
-              recv-chat_id (str (get-in body ["result" 0 "message" "chat" "id"]))
-              sender (or
-                       (get-in body ["result" 0 "message" "from" "username"])
-                       (get-in body ["result" 0 "message" "from" "first_name"]))
-              safe-sender (when sender (.replaceAll sender "\\P{Print}" "?"))
-              type (detect-type body)]
-          (when error (log/error error))
-          (if (= chat_id recv-chat_id)
-            (>! out (assoc all :sender safe-sender :type type))))
+              body (:body result)]
+          (log/infof "I take following data: ::result :body %s :error %s, :chat_id %s"
+                     body error chat_id)
+          (if error
+            (log/errorf "Error encountered: :error %s" error)
+            (try
+              (let [recv-chat_id (str (get-in body ["result" 0 "message" "chat" "id"]))
+                    sender (or
+                             (get-in body ["result" 0 "message" "from" "username"])
+                             (get-in body ["result" 0 "message" "from" "first_name"]))
+                    safe-sender (when sender (.replaceAll sender "\\P{Print}" "?"))
+                    type (detect-type body)]
+                (if (= chat_id recv-chat_id)
+                  (do (log/infof "I add following data: :sender %s :type %s" sender type)
+                      (>! out (assoc all :sender safe-sender :type type)))
+                  (log/infof "Non-matching :recv-chat-id %s, expected :chat_id %s"
+                             recv-chat_id chat_id)))
+              (catch Exception e (log/error e)))))
         (recur)))
     out))

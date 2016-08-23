@@ -101,14 +101,19 @@
       (loop []
         (let [next (<! in-chan)
               api-key (:gw-tg-api next)
-              [current-format replied-to-format] (:type next)
-              formatted (format-msg api-key current-format
-                                    (get-in next [:result :body "result" 0 "message"]))
-              formatted-reply-to
-              (format-msg api-key replied-to-format
-                          (get-in next [:result :body "result" 0 "message" "reply_to_message"]))
-              out-message (format (if formatted-reply-to "»%2$s\n%1$s" "%1$s")
-                                  formatted formatted-reply-to)]
-          (>! out (assoc next :message-text out-message)))
+              type (:type next)
+              [current-format replied-to-format] type]
+          (log/infof "I take following data: :api-key %s :type %s" api-key type)
+          (try
+            (let [formatted (format-msg api-key current-format
+                                        (get-in next [:result :body "result" 0 "message"]))
+                  formatted-reply-to
+                  (format-msg api-key replied-to-format
+                              (get-in next [:result :body "result" 0 "message" "reply_to_message"]))
+                  out-message (format (if formatted-reply-to "»%2$s\n%1$s" "%1$s")
+                                      formatted formatted-reply-to)]
+              (log/infof "I add following data: :message-text %s " out-message)
+              (>! out (assoc next :message-text out-message)))
+            (catch Exception e (log/errorf "Failed to format %s, exception: %s" next e))))
         (recur)))
     out))

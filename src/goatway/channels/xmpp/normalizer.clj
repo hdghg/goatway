@@ -1,7 +1,7 @@
 (ns goatway.channels.xmpp.normalizer
   (:require [clojure.tools.logging :as log]
             [clojure.core.async :refer [chan go <! >!]])
-  (:import (org.jivesoftware.smack.packet Stanza Message)
+  (:import (org.jivesoftware.smack.packet Message)
            (org.jivesoftware.smackx.muc MultiUserChat Occupant)
            (org.jxmpp.util XmppStringUtils)))
 
@@ -16,20 +16,22 @@
         nick (XmppStringUtils/parseResource from)]
     {:from from :stanza-id stanza-id :body body :jid jid :nick nick}))
 
+(defn clarify-merge [all stanza muc]
+  (try
+    (if (instance? Message stanza)
+      (let [new-values (clarify stanza muc)]
+        (merge all new-values)))
+    (catch Exception ex
+      (log/warnf "Cannot clarify packet %s" ex))))
+
 
 (defn normalizer-chan
   "Channel that fills parameter map with info about sender, body and so on"
   [in-chan]
   (let [out (chan)]
-    (go
-      (loop []
-        (let [{:keys [^Stanza stanza ^MultiUserChat muc] :as all} (<! in-chan)]
-          (try
-            (if (instance? Message stanza)
-              (let [new-values (clarify stanza muc)
-                    merged (merge all new-values)]
-                (>! out merged)))
-            (catch Exception ex
-              (log/warn ex))))
+    (go (loop []
+        (let [{:keys [stanza muc] :as all} (<! in-chan)
+              merged (clarify-merge all stanza muc)]
+          (when merged (>! out merged)))
         (recur)))
     out))

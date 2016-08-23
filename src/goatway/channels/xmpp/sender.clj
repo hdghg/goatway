@@ -1,7 +1,6 @@
 (ns goatway.channels.xmpp.sender
   (:require [clojure.core.async :refer [chan go <! >!]]
-            [gram-api.hl :as hl]
-            [clojure.tools.logging :as log])
+            [gram-api.hl :as hl])
   (:import (java.util WeakHashMap)))
 
 ; Send to tg result from xmpp

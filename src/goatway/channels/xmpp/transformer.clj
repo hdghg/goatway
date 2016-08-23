@@ -6,10 +6,8 @@
   "Formats message received from xmpp and sends it to out channel"
   [in-chan]
   (let [out-chan (chan)]
-    (go
-      (loop []
+    (go (loop []
         (let [{:keys [body nick] :as all} (<! in-chan)]
-          (if body
-            (>! out-chan (assoc all :out-text (format "*%s:* %s" nick (hl/escape-markdown body))))))
+          (>! out-chan (assoc all :out-text (format "*%s:* %s" nick (hl/escape-markdown body)))))
         (recur)))
     out-chan))
