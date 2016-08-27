@@ -56,11 +56,10 @@
                     sender (or
                              (get-in body ["result" 0 "message" "from" "username"])
                              (get-in body ["result" 0 "message" "from" "first_name"]))
-                    safe-sender (when sender (.replaceAll sender "\\P{Print}" "?"))
                     type (detect-type body)]
                 (if (= chat_id recv-chat_id)
                   (do (log/infof "I add following data: :sender %s :type %s" sender type)
-                      (>! out (assoc all :sender safe-sender :type type)))
+                      (>! out (assoc all :sender sender :type type)))
                   (log/infof "Non-matching :recv-chat-id %s, expected :chat_id %s"
                              recv-chat_id chat_id)))
               (catch Exception e (log/error e)))))

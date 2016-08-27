@@ -5,8 +5,9 @@
             [goatway.runtime.db :as db]))
 
 (def sent (atom (ring-buffer/ring-buffer 20)))
+(def my-own (atom (ring-buffer/ring-buffer 20)))
 
-(defn matches
+(defn sender-not-ignored
   "Returns true when sender not ignored and not himself"
   [{:keys [nick ignored body]}]
   (not (or (get ignored nick)
@@ -21,7 +22,8 @@
           (let [next (<! in-chan)
                 stanza-id (:stanza-id next)]
             (log/infof "I take data: :stanza-id %s" stanza-id)
-            (if (and (matches next) (not (some #{stanza-id} @sent)))
+            (if (and (sender-not-ignored next) (not (some #{stanza-id} @sent))
+                     (not (some #{stanza-id} @my-own)))
               (do (swap! sent into [stanza-id])
                   (log/infof "Message with :stanza-id %s is not filtered" stanza-id)
                   (>! out next))

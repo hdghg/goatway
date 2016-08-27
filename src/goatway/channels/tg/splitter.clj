@@ -2,18 +2,13 @@
   (:require [clojure.core.async :refer [chan go <! >!]]
             [clojure.string :as str]
             [goatway.utils.string :as u]
-            [goatway.utils.xmpp :as xmpp-u])
-  (:import (java.util WeakHashMap)
-           (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
-           (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)))
+            [goatway.utils.xmpp :as xmpp-u]
+            [goatway.channels.xmpp.filter :as xmpp-filter])
+  (:import (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
+           (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
+           (org.jivesoftware.smack.packet Message)))
 
-(def connections (WeakHashMap.))
-
-(defn- get-stored [uid]
-  (.get ^WeakHashMap connections uid))
-
-(defn- store [uid connection]
-  (.put ^WeakHashMap connections uid connection))
+(def connections (atom {}))
 
 (defn new-conn
   "Create new xmpp connection for given participant using given credentials"
@@ -36,7 +31,10 @@
   [^XMPPTCPConnection conn ^MultiUserChat muc sender ^String message-text]
   (when (not (.isConnected conn)) (.connect conn))
   (when (not (.isJoined muc)) (.join muc sender))
-  (.sendMessage muc message-text))
+  (let [stanza-id (u/random-string 8)
+        msg (doto (Message.) (.setBody message-text) (.setStanzaId stanza-id))]
+    (swap! xmpp-filter/my-own into [stanza-id])
+    (.sendMessage muc msg)))
 
 (defn split-send
   "Take message from channel and send it behalf :sender"
@@ -46,8 +44,8 @@
       (let [{:keys [sender message-text api-key
                     gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]} (<! in-chan)
             uid {:sender sender :api-key api-key}
-            [conn muc] (or (get-stored uid)
+            [conn muc] (or (@connections uid)
                            (new-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender))]
         (send-as conn muc sender message-text)
-        (store uid [conn muc]))
+        (swap! connections assoc uid [conn muc]))
       (recur))))
