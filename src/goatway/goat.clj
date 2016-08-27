@@ -57,7 +57,7 @@
     (.addConnectionListener
       conn
       (xmpp-u/create-listener
-        muc login (fn [] (log/info "smack: reconnecting") (.connect conn))))
+        muc {:full_name login} (fn [] (log/info "smack: reconnecting") (.connect conn))))
     (-> conn .connect .login)
     (future (while true
               (let [next-elem {:gw-tg-api gw-tg-api :gw-tg-chat gw-tg-chat

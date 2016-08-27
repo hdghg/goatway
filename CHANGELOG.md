@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.5.6 - 2016-08-27
+### Fixed
+- Fixed message forwarding
+
+### Reworked
+- In smack, telegram users will now be represented as they are in telegram: FirstName LastName
+
 ## 0.5.5 - 2016-08-27
 ### Added
 - Highlights are properly converted to telegram style

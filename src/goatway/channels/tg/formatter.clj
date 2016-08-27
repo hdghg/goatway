@@ -2,53 +2,68 @@
   (:require [clojure.core.async :refer [chan go <! >!]]
             [clojure.tools.logging :as log]
             [clojure.data.json :as json]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [goatway.utils.tg :as tg-utils]))
 
 (defn join-info
   "Joins non-nil strings and puts result in square brackets"
   [& facts]
   (->> facts (filter identity) (str/join ", ") (format "[%s]")))
 
+(defn forward-header [forward_from]
+  (if-let [full_name (:full_name (tg-utils/create-name forward_from))]
+    (str "Forwarded from " full_name ":\n")
+    ""))
+
 (def handlers
   (atom {:sticker  (fn [_ _ message]
                      (let [sticker (get message "sticker")
+                           forward-header (forward-header (get message "forward_from"))
                            size (format "%s b" (get sticker "file_size"))
                            g (format "%sx%s" (get sticker "width") (get sticker "height"))
                            emoji (get sticker "emoji")]
-                       (format "%s %s" emoji (join-info g size))))
-         :text     (fn [_ _ message] (get message "text"))
+                       (format "%s%s %s" forward-header emoji (join-info g size))))
+         :text     (fn [_ _ message] (format "%s%s" (forward-header (get message "forward_from"))
+                                             (get message "text")))
          :photo    (fn [_ _ message]
                      (let [caption (get message "caption")
+                           forward-header (forward-header (get message "forward_from"))
                            photos (get message "photo")
                            photo (last photos)
                            size (format "%s b" (get photo "file_size"))
                            g (format "%sx%s" (get photo "width") (get photo "height"))]
-                       (format "%s %s" (or caption "photo") (join-info g size))))
+                       (format "%s%s %s" forward-header (or caption "photo") (join-info g size))))
          :empty    (fn [_ _ _] nil)
          :document (fn [_ _ message]
                      (let [document (get message "document")
+                           forward-header (forward-header (get message "forward_from"))
                            caption (get message "caption")
                            file_name (get document "file_name")
-                           size (get document "file_size")]
-                       (format "%s %s" caption (join-info file_name size))))
+                           size (str (get document "file_size") " b")]
+                       (format "%s%s %s" forward-header (or caption "document")
+                               (join-info file_name size))))
          :audio    (fn [_ _ message]
                      (let [audio (get message "audio")
+                           forward-header (forward-header (get message "forward_from"))
                            size (format "size: %s b" (get audio "file_size"))
                            duration (format "duration: %ss" (get audio "duration"))
                            performer (if-let [p (get audio "performer")] (format "performer: %s" p))
                            title (if-let [t (get audio "title")] (format "title: %s" t))]
-                       (format "audio %s" (join-info title performer duration size))))
+                       (format "%saudio %s" forward-header
+                               (join-info title performer duration size))))
          :voice    (fn [_ _ message]
                      (let [voice (get message "voice")
+                           forward-header (forward-header (get message "forward_from"))
                            size (format "size: %s b" (get voice "file_size"))
                            duration (format "duration: %ss" (get voice "duration"))]
-                       (format "voice %s" (join-info duration size))))
+                       (format "%svoice %s" forward-header (join-info duration size))))
          :video    (fn [_ _ message]
                      (let [video (get message "video")
+                           forward-header (forward-header (get message "forward_from"))
                            size (format "size: %s b" (get video "file_size"))
                            duration (format "duration: %ss" (get video "duration"))
                            g (format "%sx%s" (get video "width") (get video "height"))]
-                       (format "video %s" (join-info g duration size))))
+                       (format "%svideo %s" forward-header (join-info g duration size))))
          :left_chat_participant
                    (fn [_ _ message]
                      (let [left (get message "left_chat_participant")
@@ -56,8 +71,7 @@
                            from_id (get-in message ["from" "id"])]
                        (if (= left_id from_id)
                          "/me left group"
-                         (str "Removed participant: "
-                              (or (get left "username") (get left "first_name"))))))
+                         (str "Removed participant: " (:full_name (tg-utils/create-name left))))))
          :new_chat_participant
                    (fn [_ _ message]
                      (let [new (get message "new_chat_participant")
@@ -65,15 +79,8 @@
                            from_id (get-in message ["from" "id"])]
                        (if (= new_id from_id)
                          "/me joined group"
-                         (str "Added participant: "
-                              (or (get new "username") (get new "first_name"))))))
-         :forward_from
-                   (fn [_ _ message]
-                     (let [forward_from (get message "forward_from")
-                           username (or (get forward_from "username")
-                                        (get forward_from "first_name"))
-                           text (get message "text")]
-                       (format "forwarded from %s\n%s" username text)))
+                         (str "Added participant: " (:full_name (tg-utils/create-name new))))))
+
          }))
 
 (defn unknown-formatter

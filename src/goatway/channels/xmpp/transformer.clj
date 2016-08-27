@@ -8,7 +8,7 @@
 (defn convert-highlight
   "Convert nick highlight to telegram-way: @nick"
   [message [puppet tg-user]]
-  (str/replace message puppet (str "@" tg-user)))
+  (str/replace message puppet tg-user))
 
 (defn convert-highlights
   "Change text message in a way to highlight telegram users with @ symbol"

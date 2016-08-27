@@ -8,8 +8,8 @@
 
 (defn join-muc
   "Fail-safe join to multiuserchat"
-  [^MultiUserChat muc ^String nick]
-  (loop [attempt 10 last-err (ref nil) try-nick nick]
+  [^MultiUserChat muc sender]
+  (loop [attempt 10 last-err (ref nil) try-nick (:full_name sender)]
     (if (neg? attempt)
       {:error last-err}
       (do (try
@@ -26,10 +26,11 @@
             (case @last-err
               :conflict
               (do (log/warn (str "Nickname " try-nick " conflicts, trying another..."))
-                  (recur (dec attempt) last-err (str nick "-" (- 10 attempt))))
+                  (recur (dec attempt) last-err (str (:full_name sender) "-" (- 10 attempt))))
               :jid_malformed
               (do (log/warn (str "Nickname " try-nick " is invalid for xmpp, trying another..."))
-                  (recur (dec attempt) last-err (str "anonymous-" (- 10 attempt))))
+                  (recur (dec attempt) last-err
+                         (str (or (:username sender) "anonymous") "-" (- 10 attempt))))
               (log/error (str "Unknown error " @last-err)))
             {:nick try-nick})))))
 
@@ -45,7 +46,8 @@
              (do (log/infof "smack: joined muc as %s" as)
                  (reset! nick as)
                  (swap! db/puppets conj as)
-                 (swap! xmpp-transformer/puppets-to-tg-users assoc as sender)))))
+                 (swap! xmpp-transformer/puppets-to-tg-users assoc as
+                        (if-let [usr (:username sender)] (str "@" usr) (:full_name sender)))))))
        (connectionClosedOnError [e]
          (swap! db/puppets disj @nick)
          (swap! xmpp-transformer/puppets-to-tg-users dissoc @nick)

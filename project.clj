@@ -1,4 +1,4 @@
-(defproject goatway "0.5.5"
+(defproject goatway "0.5.6"
   :description "Simple gateway between jabber muc and telegram chat"
   :url "http://github.com/hdghg/goatway"
   :license {:name "Eclipse Public License"

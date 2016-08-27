@@ -30,7 +30,7 @@
   "Send message behalf given sender"
   [^XMPPTCPConnection conn ^MultiUserChat muc sender ^String message-text]
   (when (not (.isConnected conn)) (.connect conn))
-  (when (not (.isJoined muc)) (.join muc sender))
+  (when (not (.isJoined muc)) (xmpp-u/join-muc muc sender))
   (let [stanza-id (u/random-string 8)
         msg (doto (Message.) (.setBody message-text) (.setStanzaId stanza-id))]
     (swap! xmpp-filter/my-own into [stanza-id])

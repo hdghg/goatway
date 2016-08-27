@@ -1,13 +1,14 @@
 (ns goatway.channels.tg.normalizer
   (:require [clojure.core.async :refer [chan go <! >!]]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [goatway.utils.tg :as tg-utils]
+            [clojure.data.json :as json]))
 
 (defn- detect-message-type
   "Make a guess about message type from it's content"
   [message]
   (cond
     (empty? message) :empty
-    (get message "forward_from") :forward_from
     (get message "forward_from_chat") :forward_from_chat
     (get message "audio") :audio
     (get message "voice") :voice
@@ -48,14 +49,12 @@
               error (:error result)
               body (:body result)]
           (log/infof "I take following data: ::result :body %s :error %s, :chat_id %s"
-                     body error chat_id)
+                     (json/write-str body) error chat_id)
           (if error
             (log/errorf "Error encountered: :error %s" error)
             (try
               (let [recv-chat_id (str (get-in body ["result" 0 "message" "chat" "id"]))
-                    sender (or
-                             (get-in body ["result" 0 "message" "from" "username"])
-                             (get-in body ["result" 0 "message" "from" "first_name"]))
+                    sender (tg-utils/create-name (get-in body ["result" 0 "message" "from"]))
                     type (detect-type body)]
                 (if (= chat_id recv-chat_id)
                   (do (log/infof "I add following data: :sender %s :type %s" sender type)
