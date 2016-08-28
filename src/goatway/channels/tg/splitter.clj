@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [goatway.utils.string :as u]
             [goatway.utils.xmpp :as xmpp-u]
-            [goatway.channels.xmpp.filter :as xmpp-filter])
+            [goatway.runtime.db :as db])
   (:import (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
            (org.jivesoftware.smack.packet Message)))
@@ -33,7 +33,7 @@
   (when (not (.isJoined muc)) (xmpp-u/join-muc muc sender))
   (let [stanza-id (u/random-string 8)
         msg (doto (Message.) (.setBody message-text) (.setStanzaId stanza-id))]
-    (swap! xmpp-filter/my-own into [stanza-id])
+    (db/store-stanza stanza-id)
     (.sendMessage muc msg)))
 
 (defn split-send

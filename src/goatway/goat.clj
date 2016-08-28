@@ -11,7 +11,8 @@
             [goatway.channels.xmpp.sender :as sender-to-tg]
             [clojure.core.async :as async]
             [goatway.utils.xmpp :as xmpp-u]
-            [goatway.utils.string :as u])
+            [goatway.utils.string :as u]
+            [goatway.runtime.db :as db])
   (:import (org.jivesoftware.smack SmackConfiguration PacketCollector)
            (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager)
@@ -84,5 +85,10 @@
 (defn start-goat
   "Start gateways"
   [all]
+  (if-let [gw-db-conn (:gw-db-conn all)]
+    (db/create-schema gw-db-conn)
+    (if-let [gw-db-url (:gw-db-url all)]
+      (db/create-schema {:connection-uri gw-db-url})
+      (log/info "Database not configured, runnind in amnesia mode")))
   (let [xmpp-muc (start-smack-gw all)]
     (start-telegram-gw (assoc all :xmpp-muc xmpp-muc))))

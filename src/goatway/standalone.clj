@@ -1,5 +1,4 @@
 (ns goatway.standalone
-  (:gen-class)
   (:require [environ.core :refer [env]]
             [gram-api.hl :as hl]
             [goatway.goat :as goat]
@@ -24,7 +23,8 @@ terminate goatway and set environment variable GW_TG_CHAT to that value. Then st
   [& _]
   (logging/replace-jul)
   (let [sa-params (select-keys env [:gw-tg-api :gw-tg-chat :gw-xmpp-ignored
-                                    :gw-xmpp-addr :gw-xmpp-passwd :gw-xmpp-room])
+                                    :gw-xmpp-addr :gw-xmpp-passwd :gw-xmpp-room
+                                    :gw-db-url])
         {:keys [gw-tg-api gw-tg-chat gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]} env]
     (if (some nil? [gw-tg-api gw-xmpp-passwd gw-xmpp-room gw-xmpp-addr])
       (println "To use Goatway as standalone executable, please set following environment vars:

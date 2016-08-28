@@ -1,11 +1,8 @@
 (ns goatway.channels.xmpp.filter
   (:require [clojure.core.async :refer [chan go <! >!]]
-            [amalloy.ring-buffer :as ring-buffer]
             [clojure.tools.logging :as log]
             [goatway.runtime.db :as db]))
 
-(def sent (atom (ring-buffer/ring-buffer 20)))
-(def my-own (atom (ring-buffer/ring-buffer 20)))
 
 (defn sender-not-ignored
   "Returns true when sender not ignored and not himself"
@@ -22,9 +19,8 @@
           (let [next (<! in-chan)
                 stanza-id (:stanza-id next)]
             (log/infof "I take data: :stanza-id %s" stanza-id)
-            (if (and (sender-not-ignored next) (not (some #{stanza-id} @sent))
-                     (not (some #{stanza-id} @my-own)))
-              (do (swap! sent into [stanza-id])
+            (if (and (sender-not-ignored next) (db/stanza-not-stored stanza-id))
+              (do (db/store-stanza stanza-id)
                   (log/infof "Message with :stanza-id %s is not filtered" stanza-id)
                   (>! out next))
               (log/infof "Message with :stanza-id %s was filtered" stanza-id))

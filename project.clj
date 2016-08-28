@@ -1,4 +1,4 @@
-(defproject goatway "0.5.6"
+(defproject goatway "0.6.0"
   :description "Simple gateway between jabber muc and telegram chat"
   :url "http://github.com/hdghg/goatway"
   :license {:name "Eclipse Public License"
@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.385"]
+                 [org.clojure/java.jdbc "0.6.1"]
                  [hdghg/gram-api "0.4.1"]
                  [org.igniterealtime.smack/smack-tcp "4.1.8"]
                  [org.igniterealtime.smack/smack-java7 "4.1.8"]
@@ -15,6 +16,4 @@
                  [ch.qos.logback/logback-classic "1.1.7"]
                  [org.slf4j/jul-to-slf4j "1.7.20"]
                  [amalloy/ring-buffer "1.2.1"]]
-  :main goatway.standalone
-  :profiles {:uberjar {:aot :all}}
   :global-vars {*warn-on-reflection* true})
