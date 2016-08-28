@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.0 - 2016-08-28
+### Added
+- Added database support
+
+### Reworked
+- Received stanzas now stored in database if db was configured
+- Excluded compiled code from jar, run command is not little different
+
 ## 0.5.6 - 2016-08-27
 ### Fixed
 - Fixed message forwarding
