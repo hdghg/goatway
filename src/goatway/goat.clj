@@ -5,6 +5,7 @@
             [goatway.channels.xmpp.normalizer :as xmpp-normalizer]
             [goatway.channels.xmpp.filter :as xmpp-filter]
             [goatway.channels.tg.normalizer :as tg-normalizer]
+            [goatway.channels.tg.executor :as tg-executor]
             [goatway.channels.tg.formatter :as tg-formatter]
             [goatway.channels.tg.splitter :as tg-splitter]
             [goatway.channels.xmpp.transformer :as xmpp->tg-transformer]
@@ -22,19 +23,20 @@
   "Create series of pipes that flow messages from xmpp muc to telegram chat"
   []
   (let [in-chan (async/chan)
-        normalizer-chan (xmpp-normalizer/normalizer-chan in-chan)
-        filter-chan (xmpp-filter/filter-chan normalizer-chan)
-        transformer-chan (xmpp->tg-transformer/transformer-chan filter-chan)]
-    (sender-to-tg/sender-chan transformer-chan)
+        normalizer-out (xmpp-normalizer/normalizer-chan in-chan)
+        filter-out (xmpp-filter/filter-chan normalizer-out)
+        transformer-out (xmpp->tg-transformer/transformer-chan filter-out)]
+    (sender-to-tg/sender-chan transformer-out)
     in-chan))
 
 (defn tg->smack-pipe
   "Create series of pipes that flow messages from telegram chat to xmpp muc"
   []
   (let [in-chan (async/chan)
-        normalizer-chan (tg-normalizer/normalizer-chan in-chan)
-        formatter-chan (tg-formatter/formatter-to-xmpp normalizer-chan)]
-    (tg-splitter/split-send formatter-chan)
+        executor-out (tg-executor/executor-chan in-chan)
+        normalizer-out (tg-normalizer/normalizer-chan executor-out)
+        formatter-out (tg-formatter/formatter-to-xmpp normalizer-out)]
+    (tg-splitter/split-send formatter-out)
     in-chan))
 
 (defn start-smack-gw
