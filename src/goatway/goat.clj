@@ -68,20 +68,22 @@
                                :muc       muc :gw-xmpp-addr gw-xmpp-addr
                                :ignored   ignored}]
                 (async/>!! in-chan next-elem))))
-    muc))
+    [conn muc]))
 
 (defn start-telegram-gw
   "Start telegram gateway in background thread"
-  [{:keys [gw-tg-api gw-tg-chat xmpp-muc gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]}]
+  [{:keys [gw-tg-api gw-tg-chat xmpp-conn xmpp-muc gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]}]
   (log/info "telegram: starting...")
   (let [in-chan (tg->smack-pipe)]
     (future
       (loop [api-and-offset {:api-key gw-tg-api}]
         (let [next-result (hl/next-update api-and-offset)
               new-api-and-offset next-result]
-          (async/>!! in-chan {:xmpp-muc     xmpp-muc :result next-result :chat_id gw-tg-chat
+          (async/>!! in-chan {:xmpp-conn    xmpp-conn :xmpp-muc xmpp-muc
                               :gw-xmpp-addr gw-xmpp-addr :gw-xmpp-passwd gw-xmpp-passwd
-                              :gw-xmpp-room gw-xmpp-room :gw-tg-api gw-tg-api})
+                              :gw-xmpp-room gw-xmpp-room
+                              :result next-result
+                              :chat_id gw-tg-chat :gw-tg-api gw-tg-api})
           (recur new-api-and-offset))))))
 
 (defn start-goat
@@ -92,5 +94,5 @@
     (if-let [gw-db-url (:gw-db-url all)]
       (db/create-schema {:connection-uri gw-db-url})
       (log/info "Database not configured, runnind in amnesia mode")))
-  (let [xmpp-muc (start-smack-gw all)]
-    (start-telegram-gw (assoc all :xmpp-muc xmpp-muc))))
+  (let [[xmpp-conn xmpp-muc] (start-smack-gw all)]
+    (start-telegram-gw (assoc all :xmpp-muc xmpp-muc :xmpp-conn xmpp-conn))))

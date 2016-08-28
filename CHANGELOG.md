@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.2 - 2016-08-28
+### Added
+- Command /who now gets vcard if has arguments
+
 ## 0.6.1 - 2016-08-28
 ### Added
 - Added command /who to telegram side of bot.
