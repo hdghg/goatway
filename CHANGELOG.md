@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.3 - 2016-08-30
+### Added
+- Added more logging to xmpp channels
+
+
 ## 0.6.2 - 2016-08-28
 ### Added
 - Command /who now gets vcard if has arguments

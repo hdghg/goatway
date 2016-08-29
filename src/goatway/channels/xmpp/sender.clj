@@ -1,6 +1,7 @@
 (ns goatway.channels.xmpp.sender
   (:require [clojure.core.async :refer [chan go <! >!]]
-            [gram-api.hl :as hl])
+            [gram-api.hl :as hl]
+            [clojure.tools.logging :as log])
   (:import (java.util WeakHashMap)))
 
 ; Send to tg result from xmpp
@@ -18,10 +19,13 @@
   [in-chan]
   (go
     (loop []
-      (let [{:keys [gw-tg-api gw-tg-chat out-text]} (<! in-chan)
-            uid {:api gw-tg-api :chat gw-tg-chat}
-            queue (get-stored uid)
-            {new-queue :queue} (hl/enqueue-message {:api-key gw-tg-api :chat_id gw-tg-chat
-                                                    :text    out-text :queue queue})]
-        (when (nil? queue) (store uid new-queue)))
+      (try
+        (let [{:keys [gw-tg-api gw-tg-chat out-text]} (<! in-chan)
+              uid {:api gw-tg-api :chat gw-tg-chat}
+              queue (get-stored uid)
+              {new-queue :queue} (hl/enqueue-message {:api-key gw-tg-api :chat_id gw-tg-chat
+                                                      :text    out-text :queue queue})]
+          (when (nil? queue) (store uid new-queue)))
+        (catch Exception e
+          (log/error e "Exception while sending message to telegram")))
       (recur))))

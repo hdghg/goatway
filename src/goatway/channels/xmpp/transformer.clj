@@ -1,7 +1,8 @@
 (ns goatway.channels.xmpp.transformer
   (:require [clojure.core.async :refer [chan go <! >!]]
             [gram-api.hl :as hl]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]))
 
 (def puppets-to-tg-users (atom {}))
 
@@ -20,9 +21,12 @@
   [in-chan]
   (let [out-chan (chan)]
     (go (loop []
-          (let [{:keys [body nick] :as all} (<! in-chan)
-                body-with-highlights (convert-highlights body)
-                escaped-body (hl/escape-markdown body-with-highlights)]
-            (>! out-chan (assoc all :out-text (format "*%s:* %s" nick escaped-body))))
+          (try
+            (let [{:keys [body nick] :as all} (<! in-chan)
+                  body-with-highlights (convert-highlights body)
+                  escaped-body (hl/escape-markdown body-with-highlights)]
+              (>! out-chan (assoc all :out-text (format "*%s:* %s" nick escaped-body))))
+            (catch Exception e
+              (log/error e "Transformer error")))
           (recur)))
     out-chan))
