@@ -3,7 +3,8 @@
             [clojure.string :as str]
             [goatway.utils.string :as u]
             [goatway.utils.xmpp :as xmpp-u]
-            [goatway.runtime.db :as db])
+            [goatway.runtime.db :as db]
+            [clojure.tools.logging :as log])
   (:import (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
            (org.jivesoftware.smack.packet Message)))
@@ -24,13 +25,14 @@
         muc (.getMultiUserChat mucm xmpp-room)]
     (.addConnectionListener conn (xmpp-u/create-listener muc sender))
     (-> conn .connect .login)
+    (log/infof "Created connection %s and muc %s" conn muc)
     [conn muc]))
 
 (defn send-as
   "Send message behalf given sender"
   [^XMPPTCPConnection conn ^MultiUserChat muc sender ^String message-text]
-  (when (not (.isConnected conn)) (.connect conn))
-  (when (not (.isJoined muc)) (xmpp-u/join-muc muc sender))
+  (when (not (.isConnected conn)) (log/infof "Reconnecting %s" sender) (.connect conn))
+  (when (not (.isJoined muc)) (log/infof "Rejoining as %s" sender) (xmpp-u/join-muc muc sender))
   (let [stanza-id (u/random-string 8)
         msg (doto (Message.) (.setBody message-text) (.setStanzaId stanza-id))]
     (db/store-stanza stanza-id)
@@ -45,7 +47,8 @@
                     gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]} (<! in-chan)
             uid {:sender sender :api-key api-key}
             [conn muc] (or (@connections uid)
-                           (new-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender))]
+                           (do (log/infof "Creating new connection for %s" sender)
+                               (new-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender)))]
         (send-as conn muc sender message-text)
         (swap! connections assoc uid [conn muc]))
       (recur))))

@@ -21,7 +21,9 @@
                   (ref-set last-err :conflict)
                   (if (= XMPPError$Condition/jid_malformed (.getCondition (.getXMPPError e)))
                     (ref-set last-err :jid_malformed)
-                    (ref-set last-err e))))))
+                    (if (= XMPPError$Condition/resource_constraint (.getCondition (.getXMPPError e)))
+                      (ref-set last-err :resource_constraint)
+                      (ref-set last-err e)))))))
           (if @last-err
             (case @last-err
               :conflict
@@ -31,7 +33,11 @@
               (do (log/warn (str "Nickname " try-nick " is invalid for xmpp, trying another..."))
                   (recur (dec attempt) last-err
                          (str (or (:username sender) "anonymous") "-" (- 10 attempt))))
-              (log/error (str "Unknown error " @last-err)))
+              :resource_constraint
+              (do (log/warn "Resource constraint error, reconnecting in 5 s...")
+                  (Thread/sleep 5000)
+                  (recur (dec attempt) last-err (str (:full_name sender) "-" (- 10 attempt))))
+              (log/error @last-err (str "Unknown error ")))
             {:nick try-nick})))))
 
 (defn create-listener
