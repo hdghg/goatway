@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.7 - 2016-09-12
+### Fixed
+- Fixed incorrect forward_from_chat action
+- Correctly handle resource_constraint error.
+
 ## 0.6.3 - 2016-08-30
 ### Added
 - Added more logging to xmpp channels

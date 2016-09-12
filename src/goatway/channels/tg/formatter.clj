@@ -10,24 +10,28 @@
   [& facts]
   (->> facts (filter identity) (str/join ", ") (format "[%s]")))
 
-(defn forward-header [forward_from]
-  (if-let [full_name (:full_name (tg-utils/create-name forward_from))]
-    (str "Forwarded from " full_name ":\n")
-    ""))
+(defn forward-header [all]
+  (let [forward_from (get all "forward_from")
+        forward_from_chat (get all "forward_from_chat")]
+    (cond
+      forward_from (str "Forwarded from " (:full_name (tg-utils/create-name forward_from)) ":\n")
+      forward_from_chat (format "Forwarded from %s %s:\n" (get forward_from_chat "type")
+                                (get forward_from_chat "title"))
+      :else "")))
 
 (def handlers
   (atom {:sticker  (fn [_ _ message]
                      (let [sticker (get message "sticker")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            size (format "%s b" (get sticker "file_size"))
                            g (format "%sx%s" (get sticker "width") (get sticker "height"))
                            emoji (get sticker "emoji")]
                        (format "%s%s %s" forward-header emoji (join-info g size))))
-         :text     (fn [_ _ message] (format "%s%s" (forward-header (get message "forward_from"))
+         :text     (fn [_ _ message] (format "%s%s" (forward-header message)
                                              (get message "text")))
          :photo    (fn [_ _ message]
                      (let [caption (get message "caption")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            photos (get message "photo")
                            photo (last photos)
                            size (format "%s b" (get photo "file_size"))
@@ -36,7 +40,7 @@
          :empty    (fn [_ _ _] nil)
          :document (fn [_ _ message]
                      (let [document (get message "document")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            caption (get message "caption")
                            file_name (get document "file_name")
                            size (str (get document "file_size") " b")]
@@ -44,7 +48,7 @@
                                (join-info file_name size))))
          :audio    (fn [_ _ message]
                      (let [audio (get message "audio")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            size (format "size: %s b" (get audio "file_size"))
                            duration (format "duration: %ss" (get audio "duration"))
                            performer (if-let [p (get audio "performer")] (format "performer: %s" p))
@@ -53,13 +57,13 @@
                                (join-info title performer duration size))))
          :voice    (fn [_ _ message]
                      (let [voice (get message "voice")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            size (format "size: %s b" (get voice "file_size"))
                            duration (format "duration: %ss" (get voice "duration"))]
                        (format "%svoice %s" forward-header (join-info duration size))))
          :video    (fn [_ _ message]
                      (let [video (get message "video")
-                           forward-header (forward-header (get message "forward_from"))
+                           forward-header (forward-header message)
                            size (format "size: %s b" (get video "file_size"))
                            duration (format "duration: %ss" (get video "duration"))
                            g (format "%sx%s" (get video "width") (get video "height"))]

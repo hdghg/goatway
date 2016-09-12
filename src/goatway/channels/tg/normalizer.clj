@@ -9,7 +9,6 @@
   [message]
   (cond
     (empty? message) :empty
-    (get message "forward_from_chat") :forward_from_chat
     (get message "audio") :audio
     (get message "voice") :voice
     (get message "document") :document
