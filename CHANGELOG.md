@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.9 - 2016-09-13
+### Fixed
+- Goatway now does fallback if private user credentials are invalid
+
 ## 0.6.8 - 2016-09-13
 ### Added
 - Added commands: /set and /settings

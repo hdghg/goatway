@@ -23,7 +23,7 @@ this content. We will review only standalone usage on this page
     export GW_XMPP_ROOM=chat@conference.jabber.ru
     export GW_TG_API=0123456789:S3cr3T
 
-    $ java -jar target/goatway-0.6.7-standalone.jar -e "(use 'goatway.standalone) (-main)"
+    $ java -jar target/goatway-0.6.9-standalone.jar -e "(use 'goatway.standalone) (-main)"
 
 ## Options
 
