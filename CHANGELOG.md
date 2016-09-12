@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.8 - 2016-09-13
+### Added
+- Added commands: /set and /settings
+- Added test feature to use private jabber account per user
+
 ## 0.6.7 - 2016-09-12
 ### Fixed
 - Fixed incorrect forward_from_chat action

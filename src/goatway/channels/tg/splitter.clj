@@ -28,6 +28,24 @@
     (log/infof "Created connection %s and muc %s" conn muc)
     [conn muc]))
 
+(defn read-prop [settings-map key]
+  (:value (first (filter #(= (:key %) key) settings-map))))
+
+(defn read-private-xmpp-data [id]
+  (let [user-settings (db/list-tg-settings id)
+        private-xmpp-addr (read-prop user-settings "private-xmpp-addr")
+        private-xmpp-passwd (read-prop user-settings "private-xmpp-passwd")]
+    (if (and private-xmpp-addr private-xmpp-passwd)
+      [private-xmpp-addr private-xmpp-passwd])))
+
+
+(defn new-private-conn
+  [xmpp-addr xmpp-passwd xmpp-room sender]
+  (if-let [[private-xmpp-addr private-xmpp-passwd] (read-private-xmpp-data (:id sender))]
+    (do (log/info "User %s uses private xmpp connectin settings")
+        (new-conn private-xmpp-addr private-xmpp-passwd xmpp-room sender))
+    (new-conn xmpp-addr xmpp-passwd xmpp-room sender)))
+
 (defn send-as
   "Send message behalf given sender"
   [^XMPPTCPConnection conn ^MultiUserChat muc sender ^String message-text]
@@ -48,7 +66,7 @@
             uid {:sender sender :api-key api-key}
             [conn muc] (or (@connections uid)
                            (do (log/infof "Creating new connection for %s" sender)
-                               (new-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender)))]
+                               (new-private-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender)))]
         (send-as conn muc sender message-text)
         (swap! connections assoc uid [conn muc]))
       (recur))))
