@@ -9,26 +9,31 @@
   (:import (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
            (org.jivesoftware.smack.packet Message)
-           (org.jivesoftware.smack.sasl SASLErrorException SASLError)))
+           (org.jivesoftware.smack.sasl SASLErrorException SASLError)
+           (org.jivesoftware.smack SmackException ConnectionConfiguration$SecurityMode)
+           (sun.security.provider.certpath SunCertPathBuilderException)))
 
 (def connections (atom {}))
 
 (defn new-conn
-  "Create new xmpp connection for given participant using given credentials"
-  [xmpp-addr xmpp-passwd xmpp-room sender]
-  (let [[login server] (str/split xmpp-addr #"@" 2)
-        config (-> (XMPPTCPConnectionConfiguration/builder)
-                   (.setUsernameAndPassword login xmpp-passwd)
-                   (.setServiceName server)
-                   (.setResource (u/random-string 16))
-                   (.build))
-        conn (XMPPTCPConnection. config)
-        mucm (MultiUserChatManager/getInstanceFor conn)
-        muc (.getMultiUserChat mucm xmpp-room)]
-    (.addConnectionListener conn (xmpp-u/create-listener muc sender))
-    (-> conn .connect .login)
-    (log/infof "Created connection %s and muc %s" conn muc)
-    [conn muc]))
+  ([xmpp-addr xmpp-passwd xmpp-room sender]
+   (new-conn xmpp-addr xmpp-passwd xmpp-room sender ConnectionConfiguration$SecurityMode/ifpossible))
+  ([xmpp-addr xmpp-passwd xmpp-room sender ^ConnectionConfiguration$SecurityMode sm]
+   "Create new xmpp connection for given participant using given credentials"
+   (let [[login server] (str/split xmpp-addr #"@" 2)
+         config (-> (XMPPTCPConnectionConfiguration/builder)
+                    (.setUsernameAndPassword login xmpp-passwd)
+                    (.setSecurityMode sm)
+                    (.setServiceName server)
+                    (.setResource (u/random-string 16))
+                    (.build))
+         conn (XMPPTCPConnection. config)
+         mucm (MultiUserChatManager/getInstanceFor conn)
+         muc (.getMultiUserChat mucm xmpp-room)]
+     (.addConnectionListener conn (xmpp-u/create-listener muc sender))
+     (-> conn .connect .login)
+     (log/infof "Created connection %s and muc %s" conn muc)
+     [conn muc])))
 
 (defn read-prop [settings-map key]
   (:value (first (filter #(= (:key %) key) settings-map))))
@@ -52,11 +57,31 @@
             (if (= (.getSASLError (.getSASLFailure e)) SASLError/not_authorized)
               (do (log/warnf "User %s is not_authorised: %s" sender e)
                   (hl/send-message-cycled {:api-key api-key :chat_id (:id sender)
-                                           :text unauth-err}))
-              (log/warnf "Cannot establish connection with private data for user %s: %s" sender e))
+                                           :text    unauth-err}))
+              (log/warnf "Cannot establish connection using private acc for user %s: %s" sender e))
             (new-conn xmpp-addr xmpp-passwd xmpp-room sender))
+          (catch SmackException e
+            (let [first-cause (.getCause e)
+                  second-cause (when first-cause (.getCause first-cause))
+                  third-cause (when second-cause (.getCause second-cause))]
+              (log/debugf "First cause: %s" first-cause)
+              (log/debugf "Second cause: %s" second-cause)
+              (log/debugf "Thirs cause: %s" third-cause)
+              (if (instance? SunCertPathBuilderException third-cause)
+                (do (log/warnf "Private acc %s failed TLS validation, trying w/o TLS"
+                               private-xmpp-addr)
+                    (try
+                      (new-conn private-xmpp-addr private-xmpp-passwd xmpp-room sender
+                                ConnectionConfiguration$SecurityMode/disabled)
+                      (log/infof "Private acc %s connected w/o TLS" private-xmpp-addr)
+                      (catch Exception e
+                        (log/warnf "Private acc %s failed w/o TLS, falling back to default %s"
+                                   private-xmpp-addr e)
+                        (new-conn xmpp-addr xmpp-passwd xmpp-room sender))))
+                (do (log/warnf "Unknown instance of error %s" third-cause)
+                    (new-conn xmpp-addr xmpp-passwd xmpp-room sender)))))
           (catch Exception e
-            (log/warnf "Exception while using private data for user %s: %s" sender e)
+            (log/warnf "Exception while using private acc for user %s: %s" sender e)
             (new-conn xmpp-addr xmpp-passwd xmpp-room sender))))
     (new-conn xmpp-addr xmpp-passwd xmpp-room sender)))
 

@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.12 - 2016-09-14
+### Fixed
+- When TLS auth fails, bot will try to connect w/o TLS. Only affects private xmpp account settings
+
 ## 0.6.9 - 2016-09-13
 ### Fixed
 - Goatway now does fallback if private user credentials are invalid
