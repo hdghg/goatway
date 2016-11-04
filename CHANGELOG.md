@@ -1,6 +1,17 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.22 - 2016-11-04
+### Added
+- Added ReconnectionManager that should protect goatway from xmpp-server restarts
+
+## 0.6.14 - 2016-09-26
+### Fixed
+- Temporarily changed enqueue-message with send-message-cycled and fixed next-message
+
+### Added
+- Puppets now leave xmpp room when their master telegram user leaves.
+
 ## 0.6.12 - 2016-09-14
 ### Fixed
 - When TLS auth fails, bot will try to connect w/o TLS. Only affects private xmpp account settings

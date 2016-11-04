@@ -63,6 +63,9 @@
                                                    .getStreamError .getCondition)))
            (log/warn "smack: %s closed connection with conflict")
            (log/debug e))
-         (if error-callback (error-callback))))))
+         (if error-callback (error-callback)))
+       (reconnectingIn [sec]
+         (log/infof "smack: :sender %s Reconnecting in %s seconds..." sender sec))
+       )))
   ([muc sender]
    (create-listener muc sender nil)))

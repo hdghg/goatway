@@ -22,10 +22,12 @@
   (let [out-chan (chan)]
     (go (loop []
           (try
-            (let [{:keys [body nick] :as all} (<! in-chan)
+            (let [{:keys [stanza-id body nick] :as all} (<! in-chan)
                   body-with-highlights (convert-highlights body)
-                  escaped-body (hl/escape-markdown body-with-highlights)]
-              (>! out-chan (assoc all :out-text (format "*%s:* %s" nick escaped-body))))
+                  escaped-body (hl/escape-markdown body-with-highlights)
+                  out-text (format "*%s:* %s" nick escaped-body)]
+              (log/infof "Adding out-text to stanza-id %s: %s" stanza-id out-text)
+              (>! out-chan (assoc all :out-text out-text)))
             (catch Exception e
               (log/error e "Transformer error")))
           (recur)))

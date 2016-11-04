@@ -14,7 +14,7 @@
             [goatway.utils.xmpp :as xmpp-u]
             [goatway.utils.string :as u]
             [goatway.runtime.db :as db])
-  (:import (org.jivesoftware.smack SmackConfiguration PacketCollector)
+  (:import (org.jivesoftware.smack SmackConfiguration PacketCollector ReconnectionManager ReconnectionManager$ReconnectionPolicy)
            (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager)
            (org.jivesoftware.smack.roster Roster)))
@@ -52,22 +52,28 @@
                    (.setResource (u/random-string 16))
                    (.build))
         conn (XMPPTCPConnection. config)
+        recnm (ReconnectionManager/getInstanceFor conn)
         mucm (MultiUserChatManager/getInstanceFor conn)
         muc (.getMultiUserChat mucm gw-xmpp-room)
         collector (.createPacketCollector conn (PacketCollector/newConfiguration))
         in-chan (smack->tg-pipe)
         ignored (if gw-xmpp-ignored (into #{} (str/split gw-xmpp-ignored #";")) #{})]
+    (.setReconnectionPolicy recnm ReconnectionManager$ReconnectionPolicy/RANDOM_INCREASING_DELAY)
     (.addConnectionListener
       conn
       (xmpp-u/create-listener
-        muc {:full_name login} (fn [] (log/info "smack: reconnecting") (.connect conn))))
+        muc {:full_name login}                              ;(fn [] (log/info "smack: reconnecting") (.connect conn))
+        ))
     (-> conn .connect .login)
-    (future (while true
-              (let [next-elem {:gw-tg-api gw-tg-api :gw-tg-chat gw-tg-chat
-                               :stanza    (.nextResultBlockForever collector)
-                               :muc       muc :gw-xmpp-addr gw-xmpp-addr
-                               :ignored   ignored}]
-                (async/>!! in-chan next-elem))))
+    (future
+      (while true
+        (try
+          (let [next-elem {:gw-tg-api gw-tg-api :gw-tg-chat gw-tg-chat
+                           :stanza    (.nextResultBlockForever collector)
+                           :muc       muc :gw-xmpp-addr gw-xmpp-addr
+                           :ignored   ignored}]
+            (async/>!! in-chan next-elem))
+          (catch Exception e (log/error e)))))
     [conn muc]))
 
 (defn start-telegram-gw
@@ -76,15 +82,18 @@
   (log/info "telegram: starting...")
   (let [in-chan (tg->smack-pipe)]
     (future
-      (loop [api-and-offset {:api-key gw-tg-api}]
-        (let [next-result (hl/next-update api-and-offset)
-              new-api-and-offset next-result]
-          (async/>!! in-chan {:xmpp-conn    xmpp-conn :xmpp-muc xmpp-muc
-                              :gw-xmpp-addr gw-xmpp-addr :gw-xmpp-passwd gw-xmpp-passwd
-                              :gw-xmpp-room gw-xmpp-room
-                              :result next-result
-                              :chat_id gw-tg-chat :gw-tg-api gw-tg-api})
-          (recur new-api-and-offset))))))
+      (let [offset (atom nil)]
+        (loop [api-and-offset {:api-key gw-tg-api :offset @offset}]
+          (try
+            (let [next-result (hl/next-update api-and-offset)]
+              (reset! offset (:offset next-result))
+              (async/>!! in-chan {:xmpp-conn    xmpp-conn :xmpp-muc xmpp-muc
+                                  :gw-xmpp-addr gw-xmpp-addr :gw-xmpp-passwd gw-xmpp-passwd
+                                  :gw-xmpp-room gw-xmpp-room
+                                  :result       next-result
+                                  :chat_id      gw-tg-chat :gw-tg-api gw-tg-api}))
+            (catch Exception e (log/error e "Exception inside async loop")))
+          (recur {:offset @offset :api-key gw-tg-api}))))))
 
 (defn start-goat
   "Start gateways"

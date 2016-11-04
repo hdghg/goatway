@@ -1,4 +1,4 @@
-(defproject goatway "0.6.12"
+(defproject goatway "0.6.22-SNAPSHOT"
   :description "Simple gateway between jabber muc and telegram chat"
   :url "http://github.com/hdghg/goatway"
   :license {:name "Eclipse Public License"
@@ -7,7 +7,7 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.385"]
                  [org.clojure/java.jdbc "0.6.1"]
-                 [hdghg/gram-api "0.4.1"]
+                 [hdghg/gram-api "0.4.4"]
                  [org.igniterealtime.smack/smack-tcp "4.1.8"]
                  [org.igniterealtime.smack/smack-java7 "4.1.8"]
                  [org.igniterealtime.smack/smack-im "4.1.8"]

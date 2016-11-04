@@ -20,6 +20,8 @@
   (try
     (if (instance? Message stanza)
       (let [new-values (clarify stanza muc)]
+        (log/infof "Adding following parameters to stanza-id %s: %s"
+                   (.getStanzaId stanza) new-values)
         (merge all new-values)))
     (catch Exception ex
       (log/warnf "Cannot clarify packet %s" ex))))

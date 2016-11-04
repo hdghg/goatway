@@ -20,12 +20,16 @@
   (go
     (loop []
       (try
-        (let [{:keys [gw-tg-api gw-tg-chat out-text]} (<! in-chan)
-              uid {:api gw-tg-api :chat gw-tg-chat}
-              queue (get-stored uid)
-              {new-queue :queue} (hl/enqueue-message {:api-key gw-tg-api :chat_id gw-tg-chat
-                                                      :text    out-text :queue queue})]
-          (when (nil? queue) (store uid new-queue)))
+        (let [{:keys [gw-tg-api gw-tg-chat out-text stanza-id]} (<! in-chan)
+              ;uid {:api gw-tg-api :chat gw-tg-chat}
+              ;queue (get-stored uid)
+              ]
+          (hl/send-message-cycled {:api-key    gw-tg-api :chat_id gw-tg-chat
+                                   :text       out-text
+                                   :parse_mode "Markdown"})
+          (log/infof "stanza %s: Message successfully enqueued" stanza-id)
+          ;(when (nil? queue) (store uid new-queue))
+          )
         (catch Exception e
           (log/error e "Exception while sending message to telegram")))
       (recur))))

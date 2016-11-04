@@ -10,7 +10,7 @@
            (org.jivesoftware.smackx.muc MultiUserChatManager MultiUserChat)
            (org.jivesoftware.smack.packet Message)
            (org.jivesoftware.smack.sasl SASLErrorException SASLError)
-           (org.jivesoftware.smack SmackException ConnectionConfiguration$SecurityMode)
+           (org.jivesoftware.smack SmackException ConnectionConfiguration$SecurityMode AbstractXMPPConnection)
            (sun.security.provider.certpath SunCertPathBuilderException)))
 
 (def connections (atom {}))
@@ -95,18 +95,29 @@
     (db/store-stanza stanza-id)
     (.sendMessage muc msg)))
 
+(defn- process [all]
+  (try
+    (let [{:keys [sender message-text gw-tg-api type result
+                  gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]} all
+          uid {:sender (:id sender) :api-key gw-tg-api}
+          [conn muc] (or (@connections uid)
+                         (do (log/infof "Creating new connection for %s" sender)
+                             (new-private-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender
+                                               gw-tg-api)))]
+      (send-as conn muc sender message-text)
+      (if (= :left_chat_participant (get type 0))
+        (let [left-user (get-in result [:body "result" 0 "message" "left_chat_participant" "id"])]
+          (when-let [[^AbstractXMPPConnection left-conn ^MultiUserChat left-muc]
+                     (@connections {:sender left-user :api-key gw-tg-api})]
+            (.leave left-muc)
+            (.disconnect left-conn))))
+      (swap! connections assoc uid [conn muc]))
+    (catch Exception e (log/warn e))))
+
 (defn split-send
   "Take message from channel and send it behalf :sender"
   [in-chan]
   (go
     (loop []
-      (let [{:keys [sender message-text gw-tg-api
-                    gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room]} (<! in-chan)
-            uid {:sender sender :api-key gw-tg-api}
-            [conn muc] (or (@connections uid)
-                           (do (log/infof "Creating new connection for %s" sender)
-                               (new-private-conn gw-xmpp-addr gw-xmpp-passwd gw-xmpp-room sender
-                                                 gw-tg-api)))]
-        (send-as conn muc sender message-text)
-        (swap! connections assoc uid [conn muc]))
+      (process (<! in-chan))
       (recur))))
