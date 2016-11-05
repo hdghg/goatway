@@ -17,7 +17,8 @@
   (:import (org.jivesoftware.smack SmackConfiguration PacketCollector ReconnectionManager ReconnectionManager$ReconnectionPolicy)
            (org.jivesoftware.smack.tcp XMPPTCPConnection XMPPTCPConnectionConfiguration)
            (org.jivesoftware.smackx.muc MultiUserChatManager)
-           (org.jivesoftware.smack.roster Roster)))
+           (org.jivesoftware.smack.roster Roster)
+           (org.jivesoftware.smackx.ping PingManager PingFailedListener)))
 
 (defn smack->tg-pipe
   "Create series of pipes that flow messages from xmpp muc to telegram chat"
@@ -53,12 +54,19 @@
                    (.build))
         conn (XMPPTCPConnection. config)
         recnm (ReconnectionManager/getInstanceFor conn)
+        pingm (PingManager/getInstanceFor conn)
         mucm (MultiUserChatManager/getInstanceFor conn)
         muc (.getMultiUserChat mucm gw-xmpp-room)
         collector (.createPacketCollector conn (PacketCollector/newConfiguration))
         in-chan (smack->tg-pipe)
         ignored (if gw-xmpp-ignored (into #{} (str/split gw-xmpp-ignored #";")) #{})]
     (.setReconnectionPolicy recnm ReconnectionManager$ReconnectionPolicy/RANDOM_INCREASING_DELAY)
+    (.enableAutomaticReconnection recnm)
+    (.setPingInterval pingm 10)
+    (.registerPingFailedListener
+      pingm
+      (proxy [PingFailedListener] []
+        (pingFailed [] (log/warn "Ping failed!"))))
     (.addConnectionListener
       conn
       (xmpp-u/create-listener

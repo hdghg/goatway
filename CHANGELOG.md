@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.6.23 -2016-11-05
+### Fixed
+- Fixed ReconnectionManager not being fired, added PingManager for debuging purposes
+
 ## 0.6.22 - 2016-11-04
 ### Added
 - Added ReconnectionManager that should protect goatway from xmpp-server restarts
